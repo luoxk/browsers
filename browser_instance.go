@@ -2,14 +2,14 @@ package browsers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/chromedp/cdproto/network"
 	"github.com/chromedp/cdproto/runtime"
+	"github.com/chromedp/chromedp"
 	"log"
 	"net/http"
 	"sync"
-
-	"github.com/chromedp/chromedp"
 )
 
 // BrowserInstance 表示一个浏览器实例
@@ -31,6 +31,24 @@ func NewBrowserInstance(id int, browser *chromedp.Context, ctx context.Context, 
 		Cancel:  cancel,
 		closed:  false,
 	}
+}
+
+func (bi *BrowserInstance) WaitFor(cb func(ctx context.Context) error) (err error) {
+	return chromedp.Run(bi.Context(), chromedp.ActionFunc(func(ctx context.Context) error {
+		return cb(ctx)
+	}))
+}
+
+func (b *BrowserInstance) CallJs2Str(eval string) string {
+
+	var data = make(map[string]string)
+	b.WaitFor(func(ctx context.Context) error {
+		return chromedp.Evaluate(fmt.Sprintf(`(function() {return {"dst":%v};})()`, eval), &data).Do(ctx)
+	})
+	if val, ok := data["dst"]; ok {
+		return val
+	}
+	return ""
 }
 
 // Close 关闭浏览器实例
@@ -60,6 +78,10 @@ func (bi *BrowserInstance) Close() error {
 	log.Printf("Browser instance %d has been closed", bi.ID)
 
 	return nil
+}
+
+func (bi *BrowserInstance) Context() context.Context {
+	return bi.Ctx
 }
 
 // IsClosed 检查浏览器实例是否已关闭
@@ -167,4 +189,11 @@ type BrowserResponse struct {
 	Data  string `json:"data,omitempty"`
 	Error string `json:"error,omitempty"`
 	Token string `json:"token,omitempty"`
+}
+
+func (this *BrowserResponse) Err() error {
+	if len(this.Error) > 0 {
+		return errors.New(this.Error)
+	}
+	return nil
 }
