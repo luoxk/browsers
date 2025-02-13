@@ -18,8 +18,8 @@ type BrowserInstance struct {
 	Browser *chromedp.Context  // 浏览器实例
 	Ctx     context.Context    // 上下文
 	Cancel  context.CancelFunc // 取消函数
-	Closed  bool               // 标记浏览器是否已关闭
-	mu      sync.Mutex         // 用于保护 Closed 状态的互斥锁
+	closed  bool               // 标记浏览器是否已关闭
+	mu      sync.Mutex         // 用于保护 closed 状态的互斥锁
 }
 
 // NewBrowserInstance 创建一个新的浏览器实例
@@ -29,7 +29,7 @@ func NewBrowserInstance(id int, browser *chromedp.Context, ctx context.Context, 
 		Browser: browser,
 		Ctx:     ctx,
 		Cancel:  cancel,
-		Closed:  false,
+		closed:  false,
 	}
 }
 
@@ -38,7 +38,7 @@ func (bi *BrowserInstance) Close() error {
 	bi.mu.Lock()
 	defer bi.mu.Unlock()
 
-	if bi.Closed {
+	if bi.closed {
 		// 如果已经关闭，直接返回
 		return nil
 	}
@@ -54,7 +54,7 @@ func (bi *BrowserInstance) Close() error {
 	}
 
 	// 3. 标记浏览器已关闭
-	bi.Closed = true
+	bi.closed = true
 
 	// 4. 记录日志 (可选)
 	log.Printf("Browser instance %d has been closed", bi.ID)
@@ -63,15 +63,15 @@ func (bi *BrowserInstance) Close() error {
 }
 
 // IsClosed 检查浏览器实例是否已关闭
-func (bi *BrowserInstance) IsClosed() bool {
+func (bi *BrowserInstance) Closed() bool {
 	bi.mu.Lock()
 	defer bi.mu.Unlock()
-	return bi.Closed
+	return bi.closed
 }
 
 func (bi *BrowserInstance) Goto(url string, beforeNavigate ...func(ctx context.Context) error) error {
 	// 如果浏览器已关闭，直接返回错误
-	if bi.IsClosed() {
+	if bi.Closed() {
 		return fmt.Errorf("浏览器已关闭")
 	}
 	// 执行导航操作
@@ -91,7 +91,7 @@ func (bi *BrowserInstance) Goto(url string, beforeNavigate ...func(ctx context.C
 
 func (bi *BrowserInstance) GetCookies() ([]*http.Cookie, error) {
 	// 检查浏览器是否已关闭
-	if bi.IsClosed() {
+	if bi.Closed() {
 		return nil, fmt.Errorf("浏览器已关闭")
 	}
 
