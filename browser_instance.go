@@ -19,18 +19,29 @@ type BrowserInstance struct {
 	Ctx     context.Context    // 上下文
 	Cancel  context.CancelFunc // 取消函数
 	closed  bool               // 标记浏览器是否已关闭
-	mu      sync.Mutex         // 用于保护 closed 状态的互斥锁
+	mu      sync.RWMutex       // 用于保护 closed 状态的互斥锁
 }
 
 // NewBrowserInstance 创建一个新的浏览器实例
 func NewBrowserInstance(id int, browser *chromedp.Context, ctx context.Context, cancel context.CancelFunc) *BrowserInstance {
-	return &BrowserInstance{
+	instance := &BrowserInstance{
 		ID:      id,
 		Browser: browser,
 		Ctx:     ctx,
 		Cancel:  cancel,
 		closed:  false,
 	}
+
+	// 启动一个 goroutine 来监听上下文的完成
+	go instance.monitorContext()
+	return instance
+}
+
+// monitorContext 监听上下文的完成信号
+func (bi *BrowserInstance) monitorContext() {
+	<-bi.Ctx.Done()
+	// 上下文完成时自动关闭浏览器实例
+	bi.Close()
 }
 
 func (bi *BrowserInstance) WaitFor(cb func(ctx context.Context) error) (err error) {
@@ -52,32 +63,26 @@ func (b *BrowserInstance) CallJs2Str(eval string) string {
 }
 
 // Close 关闭浏览器实例
-func (bi *BrowserInstance) Close() error {
+func (bi *BrowserInstance) Close() {
 	bi.mu.Lock()
 	defer bi.mu.Unlock()
-
 	if bi.closed {
 		// 如果已经关闭，直接返回
-		return nil
+		return
 	}
-
 	// 1. 确保取消所有挂起的浏览器任务
 	if err := chromedp.Cancel(bi.Ctx); err != nil {
 		log.Printf("Failed to cancel chromedp context for browser instance %d: %v", bi.ID, err)
 	}
-
 	// 2. 释放上下文并关闭浏览器
 	if bi.Cancel != nil {
 		bi.Cancel() // 取消浏览器上下文
 	}
-
 	// 3. 标记浏览器已关闭
 	bi.closed = true
-
 	// 4. 记录日志 (可选)
 	log.Printf("Browser instance %d has been closed", bi.ID)
-
-	return nil
+	return
 }
 
 func (bi *BrowserInstance) Context() context.Context {
@@ -86,8 +91,8 @@ func (bi *BrowserInstance) Context() context.Context {
 
 // IsClosed 检查浏览器实例是否已关闭
 func (bi *BrowserInstance) Closed() bool {
-	bi.mu.Lock()
-	defer bi.mu.Unlock()
+	bi.mu.RLock()
+	defer bi.mu.RUnlock()
 	return bi.closed
 }
 

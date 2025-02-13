@@ -3,7 +3,9 @@ package browsers
 import (
 	"context"
 	"fmt"
+	"github.com/chromedp/cdproto/fetch"
 	"github.com/chromedp/chromedp"
+	"image"
 	"log"
 	"sync"
 )
@@ -16,6 +18,8 @@ type BrowserOptions struct {
 	UserDir     string                                            // 用户目录
 	Headless    bool                                              // 是否启用无头模式
 	HookFunc    func(ctx context.Context) func(event interface{}) // 网络拦截器
+	WindowSize  *image.Point                                      //窗口大小
+	DisableGPU  bool                                              //禁用硬件加速
 }
 
 // BrowserController 用于管理多个浏览器实例
@@ -45,6 +49,13 @@ func (bc *BrowserController) LaunchBrowser(options BrowserOptions) (*BrowserInst
 		chromedp.Flag("headless", options.Headless),     // 是否启用无头模式
 		chromedp.Flag("user-data-dir", options.UserDir), // 指定用户目录
 	)
+	if options.DisableGPU {
+		allocatorOpts = append(allocatorOpts, chromedp.DisableGPU)
+	}
+
+	if options.WindowSize != nil {
+		allocatorOpts = append(allocatorOpts, chromedp.WindowSize(options.WindowSize.X, options.WindowSize.Y))
+	}
 
 	// 设置代理
 	if options.Proxy != "" {
@@ -70,9 +81,12 @@ func (bc *BrowserController) LaunchBrowser(options BrowserOptions) (*BrowserInst
 
 	// 获取浏览器实例
 	browser := chromedp.FromContext(ctx)
-
 	// 设置网络拦截器
 	if options.HookFunc != nil {
+		if err = chromedp.Run(ctx, fetch.Enable()); err != nil {
+			log.Println(err)
+			return nil, err
+		}
 		chromedp.ListenTarget(ctx, options.HookFunc(ctx))
 	}
 
@@ -100,10 +114,7 @@ func (bc *BrowserController) CloseBrowser(id int) error {
 		return fmt.Errorf("browser instance with ID %d does not exist", id)
 	}
 
-	err := instance.Close()
-	if err != nil {
-		return err
-	}
+	instance.Close()
 
 	delete(bc.instances, id) // 从映射中移除
 	return nil
@@ -128,10 +139,7 @@ func (bc *BrowserController) CloseAllBrowsers() {
 	defer bc.mu.Unlock()
 
 	for id, instance := range bc.instances {
-		err := instance.Close()
-		if err != nil {
-			log.Printf("Failed to close browser instance %d: %v", id, err)
-		}
+		instance.Close()
 		delete(bc.instances, id)
 	}
 }
