@@ -45,10 +45,13 @@ func (bc *BrowserController) LaunchBrowser(options BrowserOptions) (*BrowserInst
 	// 配置浏览器启动参数
 	allocatorOpts := append(
 		chromedp.DefaultExecAllocatorOptions[:],
-		chromedp.ExecPath(options.Path),                 // 指定浏览器路径
-		chromedp.Flag("headless", options.Headless),     // 是否启用无头模式
-		chromedp.Flag("user-data-dir", options.UserDir), // 指定用户目录
+		chromedp.ExecPath(options.Path),             // 指定浏览器路径
+		chromedp.Flag("headless", options.Headless), // 是否启用无头模式
 	)
+	if options.UserDir != "" {
+		allocatorOpts = append(allocatorOpts, chromedp.UserDataDir(options.UserDir))
+	}
+
 	if options.DisableGPU {
 		allocatorOpts = append(allocatorOpts, chromedp.DisableGPU)
 	}
