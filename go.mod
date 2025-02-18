@@ -4,7 +4,7 @@ go 1.23
 
 require (
 	github.com/chromedp/cdproto v0.0.0-20250210231439-aea867ea8506
-	github.com/chromedp/chromedp v0.12.1
+	github.com/luoxk/chromedp v0.12.1
 )
 
 require (
@@ -16,3 +16,5 @@ require (
 	github.com/mailru/easyjson v0.9.0 // indirect
 	golang.org/x/sys v0.29.0 // indirect
 )
+
+replace github.com/luoxk/chromedp => ../luoxk/chromedp
