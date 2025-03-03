@@ -77,6 +77,7 @@ func (bi *BrowserInstance) Close() {
 	// 2. 释放上下文并关闭浏览器
 	if bi.Cancel != nil {
 		bi.Cancel() // 取消浏览器上下文
+
 	}
 	// 3. 标记浏览器已关闭
 	bi.closed = true

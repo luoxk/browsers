@@ -71,14 +71,13 @@ func (bc *BrowserController) LaunchBrowser(options BrowserOptions) (*BrowserInst
 	}
 
 	// 创建上下文
-	allocCtx, cancelAlloc := chromedp.NewExecAllocator(context.Background(), allocatorOpts...)
-	ctx, cancel := chromedp.NewContext(allocCtx)
+	ctx, cancel := chromedp.NewExecAllocator(context.Background(), allocatorOpts...)
+	ctx, cancel = chromedp.NewContext(ctx)
 
 	// 启动浏览器
 	err := chromedp.Run(ctx, chromedp.Navigate("about:blank"))
 	if err != nil {
 		cancel()
-		cancelAlloc()
 		return nil, err
 	}
 
@@ -97,8 +96,9 @@ func (bc *BrowserController) LaunchBrowser(options BrowserOptions) (*BrowserInst
 	id := bc.nextID
 	bc.nextID++
 	instance := NewBrowserInstance(id, browser, ctx, func() {
+
 		cancel()
-		cancelAlloc()
+		browser.Browser.Process().Kill()
 	})
 
 	// 将浏览器实例添加到控制器中
