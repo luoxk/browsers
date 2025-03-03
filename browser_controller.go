@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/chromedp/cdproto/fetch"
-	"github.com/chromedp/chromedp"
+	"github.com/luoxk/chromedp"
 	"image"
 	"log"
 	"sync"

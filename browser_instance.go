@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"github.com/chromedp/cdproto/network"
 	"github.com/chromedp/cdproto/runtime"
-	"github.com/chromedp/chromedp"
+	"github.com/luoxk/chromedp"
 	"log"
 	"net/http"
 	"sync"
@@ -86,6 +86,7 @@ func (bi *BrowserInstance) Close() {
 }
 
 func (bi *BrowserInstance) Context() context.Context {
+	fmt.Println("get Context")
 	return bi.Ctx
 }
 
