@@ -1,4 +1,4 @@
-module browsers
+module github.com/luoxk/browsers
 
 go 1.23
 
