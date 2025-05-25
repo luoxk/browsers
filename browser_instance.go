@@ -87,6 +87,7 @@ func (bi *BrowserInstance) Close() {
 }
 
 func (bi *BrowserInstance) Context() context.Context {
+	fmt.Println("get Context")
 	return bi.Ctx
 }
 
