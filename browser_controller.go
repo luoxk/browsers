@@ -17,6 +17,7 @@ type BrowserOptions struct {
 	Proxy       string                                            // 代理地址
 	UserDir     string                                            // 用户目录
 	Headless    bool                                              // 是否启用无头模式
+	Flags       []chromedp.ExecAllocatorOption                    //启动参数
 	HookFunc    func(ctx context.Context) func(event interface{}) // 网络拦截器
 	WindowSize  *image.Point                                      //窗口大小
 	DisableGPU  bool                                              //禁用硬件加速
@@ -48,6 +49,10 @@ func (bc *BrowserController) LaunchBrowser(options BrowserOptions) (*BrowserInst
 		chromedp.ExecPath(options.Path),             // 指定浏览器路径
 		chromedp.Flag("headless", options.Headless), // 是否启用无头模式
 	)
+	for _, flag := range options.Flags {
+		allocatorOpts = append(allocatorOpts, flag)
+	}
+
 	if options.UserDir != "" {
 		allocatorOpts = append(allocatorOpts, chromedp.UserDataDir(options.UserDir))
 	}
